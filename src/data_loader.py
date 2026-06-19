@@ -14,30 +14,33 @@ class InkTraceDataset(Dataset):
             self.char2idx = json.load(f)
         
         self.transform = transform or transforms.Compose([
-            transforms.Grayscale(),
-            transforms.Resize((64, 256)),
-            transforms.ToTensor(),
-        ])
+                    transforms.Grayscale(),
+                    transforms.Resize((64, 256)),
+                    transforms.ToTensor(),
+                    # CRITICAL NaN FIX: Center pixel values between -1 and 1
+                    transforms.Normalize((0.5,), (0.5,)) 
+                ])
         
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, idx):
-        # Extract dictionary and binary data
-        img_entry = self.data.iloc[idx]['image']
-        text = self.data.iloc[idx]['text']
-        
-        # Convert binary to PIL Image
-        image = Image.open(io.BytesIO(img_entry['bytes'])).convert('RGB')
-        
-        if self.transform:
-            image = self.transform(image)
+            img_binary = self.data.iloc[idx]['image.bytes']
+            text_label = self.data.iloc[idx]['text']
             
-        # Convert string to indices
-        label = [self.char2idx.get(char, 0) for char in text]
-        
-        return image, torch.tensor(label, dtype=torch.long)
-
+            image = Image.open(io.BytesIO(img_binary)).convert('RGB')
+            
+            if self.transform:
+                image = self.transform(image)
+                
+            label = []
+            for char in str(text_label):
+                idx = self.char2idx.get(char, -1)
+                if idx > 0:
+                    label.append(idx)
+            
+            return image, torch.tensor(label, dtype=torch.long)
+    
 def collate_fn(batch):
     """
     Handles variable length labels by padding them with 0 (<PAD>)

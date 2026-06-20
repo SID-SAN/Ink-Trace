@@ -6,13 +6,14 @@ class InkTraceModel(nn.Module):
         super(InkTraceModel, self).__init__()
         
         self.cnn = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
-            nn.Conv2d(32, 64, kernel_size=3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1), nn.ReLU(), nn.MaxPool2d((2, 1))
-        )
+                    nn.Conv2d(1, 64, kernel_size=3, padding=1), nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(2),
+                    nn.Conv2d(64, 128, kernel_size=3, padding=1), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(2),
+                    nn.Conv2d(128, 256, kernel_size=3, padding=1), nn.BatchNorm2d(256), nn.ReLU(), 
+                    nn.Conv2d(256, 256, kernel_size=3, padding=1), nn.BatchNorm2d(256), nn.ReLU(), nn.MaxPool2d((2, 1))
+                )
         
-        self.lstm = nn.LSTM(input_size=1024 , hidden_size=hidden_size, 
-                            num_layers=2, bidirectional=True, batch_first=True)
+        self.lstm = nn.LSTM(input_size=2048 , hidden_size=hidden_size, 
+                            num_layers=2, bidirectional=True, batch_first=True, dropout=0.5)
         
         self.fc = nn.Linear(hidden_size * 2, vocab_size)
 

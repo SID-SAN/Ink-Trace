@@ -18,11 +18,12 @@ loader = DataLoader(dataset, batch_size=32, shuffle=True, collate_fn=collate_fn)
 model = InkTraceModel(vocab_size=len(vocab)).to(device)
 
 # 2. Training Config
-optimizer = optim.Adam(model.parameters(), lr=1e-5)
+optimizer = optim.Adam(model.parameters(), lr=1e-3)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
 # zero_infinity=True safely handles any remaining infinite loss spikes
 criterion = torch.nn.CTCLoss(blank=0, zero_infinity=True)
 
-epochs = 10
+epochs = 25
 os.makedirs('checkpoints', exist_ok=True)
 
 # 3. Production Training Loop
@@ -73,7 +74,10 @@ for epoch in range(epochs):
     
     # Epoch Summary & Checkpoint Saving
     avg_loss = total_loss / valid_batches if valid_batches > 0 else 0
-    print(f"\n=== Epoch {epoch+1}/{epochs} Completed | Average Loss: {avg_loss:.4f} ===\n")
+    current_lr = optimizer.param_groups[0]['lr']
+    print(f"\n=== Epoch {epoch+1}/{epochs} Completed | Average Loss: {avg_loss:.4f} | LR: {current_lr:.6f} ===\n")
+    scheduler.step(avg_loss)
+
     
     torch.save(model.state_dict(), f'checkpoints/inktrace_epoch_{epoch+1}.pth')
 

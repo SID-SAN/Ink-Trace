@@ -20,10 +20,9 @@ model = InkTraceModel(vocab_size=len(vocab)).to(device)
 # 2. Training Config
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
-# zero_infinity=True safely handles any remaining infinite loss spikes
 criterion = torch.nn.CTCLoss(blank=0, zero_infinity=True)
 
-epochs = 25
+epochs = 50
 os.makedirs('checkpoints', exist_ok=True)
 
 # 3. Production Training Loop
@@ -37,11 +36,9 @@ for epoch in range(epochs):
     for step, (images, labels) in enumerate(loader):
         images, labels = images.to(device), labels.to(device)
         
-        # Forward pass
         output = model(images)
         output = output.permute(1, 0, 2)
         
-        # Length validation
         time_steps = output.size(0)
         target_lengths = torch.sum(labels != 0, dim=1)
         valid_indices = (target_lengths > 0) & (target_lengths <= time_steps)
@@ -49,7 +46,6 @@ for epoch in range(epochs):
         if not valid_indices.any():
             continue 
             
-        # Filter to only valid sequences
         output = output[:, valid_indices, :]
         labels = labels[valid_indices]
         target_lengths = target_lengths[valid_indices]
@@ -57,9 +53,7 @@ for epoch in range(epochs):
         batch_size = labels.size(0)
         input_lengths = torch.full(size=(batch_size,), fill_value=time_steps, dtype=torch.long)
         
-        # CTC Loss & Backprop
         loss = criterion(output, labels, input_lengths, target_lengths)
-        
         optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -68,11 +62,9 @@ for epoch in range(epochs):
         total_loss += loss.item()
         valid_batches += 1
         
-        # Print update every 50 batches to keep terminal clean
         if step % 50 == 0:
             print(f"Epoch {epoch+1} | Step {step} | Current Loss: {loss.item():.4f}")
     
-    # Epoch Summary & Checkpoint Saving
     avg_loss = total_loss / valid_batches if valid_batches > 0 else 0
     current_lr = optimizer.param_groups[0]['lr']
     print(f"\n=== Epoch {epoch+1}/{epochs} Completed | Average Loss: {avg_loss:.4f} | LR: {current_lr:.6f} ===\n")

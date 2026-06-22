@@ -32,8 +32,8 @@ class InkTraceDataset(Dataset):
         new_w = int(w * (64 / h))
         img = img.resize((new_w, 64), Image.Resampling.LANCZOS)
         
-        # 2. Pad to fixed 256 width for batching
-        target_w = 256
+        # 2. Pad to fixed 512 width for batching
+        target_w = 512
         if new_w < target_w:
             pad_width = target_w - new_w
             img = ImageOps.expand(img, border=(0, 0, pad_width, 0), fill=255)
@@ -51,18 +51,11 @@ class InkTraceDataset(Dataset):
         
         return image_tensor, torch.tensor(label, dtype=torch.long)
     
-    # At the bottom of src/data_loader.py
-
 def collate_fn(batch):
     """
     Handles variable length labels by padding them with 0 (<PAD>)
     """
     images, labels = zip(*batch)
-    
-    # Stack images (already fixed size from transform)
     images = torch.stack(images)
-    
-    # Pad sequences in the batch
     labels = pad_sequence(labels, batch_first=True, padding_value=0)
-    
     return images, labels

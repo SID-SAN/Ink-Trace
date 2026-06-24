@@ -34,11 +34,14 @@ class InkTraceDataset(Dataset):
         
         # 2. Pad to fixed 512 width for batching
         target_w = 512
+        
         if new_w < target_w:
             pad_width = target_w - new_w
-            img = ImageOps.expand(img, border=(0, 0, pad_width, 0), fill=255)
-        else:
-            img = img.crop((0, 0, target_w, 64))
+            img = ImageOps.expand(
+                img,
+                border=(0, 0, pad_width, 0),
+                fill=255
+            )
             
         image_tensor = self.to_tensor(img)
             
